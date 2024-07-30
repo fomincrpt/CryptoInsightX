@@ -1,0 +1,86 @@
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+
+class CryptoInsightX:
+    def __init__(self):
+        self.api_url = 'https://api.coingecko.com/api/v3'
+
+    def get_current_price(self, coin_id: str) -> dict:
+        """Fetches current price data for a given cryptocurrency."""
+        url = f"{self.api_url}/simple/price"
+        params = {
+            'ids': coin_id,
+            'vs_currencies': 'usd'
+        }
+        response = requests.get(url, params=params)
+        return response.json()
+
+    def get_historical_data(self, coin_id: str, days: int = 30) -> pd.DataFrame:
+        """Fetches historical price data for a given cryptocurrency."""
+        url = f"{self.api_url}/coins/{coin_id}/market_chart"
+        params = {
+            'vs_currency': 'usd',
+            'days': days
+        }
+        response = requests.get(url, params=params)
+        data = response.json()
+        prices = data.get('prices', [])
+
+        # Convert to DataFrame
+        df = pd.DataFrame(prices, columns=['timestamp', 'price'])
+        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        df.set_index('timestamp', inplace=True)
+        return df
+
+    def plot_price_trends(self, coin_id: str, days: int = 30):
+        """Plots historical price trends for a given cryptocurrency."""
+        df = self.get_historical_data(coin_id, days)
+        if df.empty:
+            print("No historical data found.")
+            return
+
+        plt.figure(figsize=(12, 6))
+        plt.plot(df.index, df['price'], marker='o', linestyle='-', color='b')
+        plt.title(f'Price Trends for {coin_id.capitalize()}')
+        plt.xlabel('Date')
+        plt.ylabel('Price (USD)')
+        plt.grid(True)
+        plt.show()
+
+    def get_market_data(self, coin_id: str) -> dict:
+        """Fetches market data for a given cryptocurrency."""
+        url = f"{self.api_url}/coins/{coin_id}"
+        response = requests.get(url)
+        return response.json()
+
+    def display_market_data(self, coin_id: str):
+        """Displays market data for a given cryptocurrency."""
+        market_data = self.get_market_data(coin_id)
+        if not market_data:
+            print("No market data found.")
+            return
+
+        print(f"Market Data for {coin_id.capitalize()}:")
+        print(f"Name: {market_data.get('name', 'N/A')}")
+        print(f"Symbol: {market_data.get('symbol', 'N/A')}")
+        print(f"Current Price: ${market_data.get('market_data', {}).get('current_price', {}).get('usd', 'N/A')}")
+        print(f"Market Cap: ${market_data.get('market_data', {}).get('market_cap', {}).get('usd', 'N/A')}")
+        print(f"Total Volume: ${market_data.get('market_data', {}).get('total_volume', {}).get('usd', 'N/A')}")
+        print(f"24h High: ${market_data.get('market_data', {}).get('high_24h', {}).get('usd', 'N/A')}")
+        print(f"24h Low: ${market_data.get('market_data', {}).get('low_24h', {}).get('usd', 'N/A')}")
+
+# Example Usage
+if __name__ == "__main__":
+    crypto_insight_x = CryptoInsightX()
+
+    # Get Current Price
+    coin_id = 'bitcoin'  # Example coin ID
+    current_price = crypto_insight_x.get_current_price(coin_id)
+    print(f"Current Price for {coin_id.capitalize()}: ${current_price.get(coin_id, {}).get('usd', 'N/A')}")
+
+    # Plot Price Trends
+    crypto_insight_x.plot_price_trends(coin_id, days=30)
+
+    # Display Market Data
+    crypto_insight_x.display_market_data(coin_id)
